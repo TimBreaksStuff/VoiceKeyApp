@@ -1,0 +1,57 @@
+<UserControl x:Class="VoiceKey.App.DictionaryPane"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="44,30,44,40">
+
+            <TextBlock Text="TERMS" Style="{StaticResource SectionLabel}" />
+            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="700"
+                       HorizontalAlignment="Left" Style="{StaticResource Body}"
+                       Foreground="{StaticResource Ink3}"
+                       Text="Names and jargon whisper keeps mishearing. They are handed to the model as a glossary before it listens, so it spells them the way you do." />
+            <DataGrid x:Name="TermsGrid" Margin="0,14,0,0" MaxHeight="240"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False"
+                      HeadersVisibility="Column" CellEditEnding="OnCellEdited">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Term" Width="*" Binding="{Binding Text}" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Content="Add term" Style="{StaticResource GhostButton}" Click="OnAddTerm" />
+                <Button Content="Remove selected" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
+                        Click="OnRemoveTerms" />
+            </StackPanel>
+
+            <TextBlock Text="REPLACEMENTS" Style="{StaticResource SectionLabel}" Margin="0,36,0,0" />
+            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="700"
+                       HorizontalAlignment="Left" Style="{StaticResource Body}"
+                       Foreground="{StaticResource Ink3}"
+                       Text="When I say this, type that — applied to the finished transcript. A greyed row is shadowed by an earlier row claiming the same phrase, and will not take effect." />
+            <DataGrid x:Name="ReplacementsGrid" Margin="0,14,0,0" MaxHeight="360"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False"
+                      HeadersVisibility="Column" CellEditEnding="OnCellEdited">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="When I say" Width="*" Binding="{Binding Spoken}" />
+                    <DataGridTextColumn Header="Type" Width="*" Binding="{Binding Written}" />
+                </DataGrid.Columns>
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsShadowed}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Muted4}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+            </DataGrid>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Content="Add replacement" Style="{StaticResource GhostButton}"
+                        Click="OnAddReplacement" />
+                <Button Content="Remove selected" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
+                        Click="OnRemoveReplacements" />
+            </StackPanel>
+
+            <TextBlock x:Name="PathLabel" Margin="0,26,0,0" Style="{StaticResource MetaLabel}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
