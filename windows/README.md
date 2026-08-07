@@ -2,7 +2,11 @@
 
 Minimal Windows tray dictation app. **Hold Ctrl+Alt+D**, speak, release — the transcribed text is typed at the cursor of whatever app has focus. A quick tap (<0.35s) toggles instead: tap to start, tap again to stop (or just stop talking for ~1s and it auto-stops). Change the shortcut via tray icon → right-click → "Shortcut…" — press any combo containing Ctrl, Alt or Win. Transcription runs fully local via [Whisper.net](https://github.com/sandrohanea/whisper.net) (whisper.cpp on CUDA), model `ggml-small.en`.
 
-Left-clicking the tray icon, or the menu's "All Transcripts…", opens the main window: everything you have dictated, grouped by day, with `copy` and a `⋯` menu (copy, re-insert at cursor, add term to dictionary, delete) on each row; the sidebar switches to the dictionary. Closing the window leaves VoiceKey running in the tray. History lives in `%LOCALAPPDATA%\VoiceKey\history.json`.
+Left-clicking the tray icon, or the menu's "All Transcripts…", opens the main window: everything you have dictated, grouped by day, searchable and sortable, with `Copy` and `Delete` on each row; the sidebar switches to the dictionary. Closing the window leaves VoiceKey running in the tray. History lives in `%LOCALAPPDATA%\VoiceKey\history.json`.
+
+The gear at the bottom of the sidebar opens **Settings**: `Start with Windows`, `Sounds`, `Shortcut`, the diagnostics log, the walkthrough, and the update check. Starting and stopping a dictation plays two short notes — E5 up to B5, then back down — which `Sounds — On` turns off; the choice is kept in `%LOCALAPPDATA%\VoiceKey\preferences.json`.
+
+**Updates**: VoiceKey asks GitHub for the latest release once at launch, and says nothing if that fails. When there is a newer one, a clay `Update to …` appears under Settings; clicking it downloads the `win-x64` zip, quits, copies the build over this one, and starts it again.
 
 ## Build & run
 

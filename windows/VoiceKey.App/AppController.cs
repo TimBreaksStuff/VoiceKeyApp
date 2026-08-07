@@ -24,6 +24,7 @@ internal sealed class AppController : IDisposable
     private readonly NotifyIcon _tray = new();
     private readonly AudioRecorder _recorder = new();
     private readonly Transcriber _transcriber = new();
+    private readonly Updater _updater = new();
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
 
@@ -36,6 +37,7 @@ internal sealed class AppController : IDisposable
     private MainWindow? _window;
 
     private DictationStatus _status = DictationStatus.Loading;
+    private UpdateStatus _update = UpdateStatus.Idle;
     private DateTimeOffset? _recordingStartedByPressAt;
     private DateTimeOffset? _recordingStartedAt;
 
@@ -77,6 +79,7 @@ internal sealed class AppController : IDisposable
         SyncUi();
         ShowWindow();
         _ = LoadModelAsync();
+        _ = CheckForUpdateAsync(silent: true);
     }
 
     private async Task LoadModelAsync()
@@ -226,7 +229,9 @@ internal sealed class AppController : IDisposable
             _history, status, _shortcut.Label, _microphoneGrant, _modelGrant,
             WindowPresentation.ShowsOnboarding(_preferences.OnboardingDismissed,
                                                _history.Records.Count),
-            LoginItem.Read()));
+            LoginItem.Read(),
+            _preferences.SoundCues,
+            _update));
     }
 
     /// <summary>A NotifyIcon tooltip is capped at 63 characters; longer text is dropped silently.</summary>
@@ -275,6 +280,7 @@ internal sealed class AppController : IDisposable
                 try
                 {
                     _recorder.Start();
+                    if (_preferences.SoundCues) SoundCue.RecordingStarted();
                     _recordingStartedByPressAt = DateTimeOffset.Now;
                     _microphoneGrant = Grant.Granted;
                     SetStatus(DictationStatus.Recording(0));
@@ -317,6 +323,8 @@ internal sealed class AppController : IDisposable
         SetStatus(DictationStatus.Transcribing);
 
         var (samples, heardSpeech) = _recorder.Stop();
+        // After Stop(), so the cue is never in the recording it announces.
+        if (_preferences.SoundCues) SoundCue.RecordingStopped();
         var duration = TimeSpan.FromSeconds(samples.Length / 16_000.0); // recorder resamples to 16 kHz
         Log.Line(string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"stopped — {samples.Length} samples ({duration.TotalSeconds:F1}s), heardSpeech={heardSpeech}"));
@@ -331,6 +339,39 @@ internal sealed class AppController : IDisposable
         // rules must never rewrite words the user did not opt into.
         var dictionary = VocabularyDictionary.Load(Storage.Dictionary) ?? new VocabularyDictionary();
         _ = TranscribeAsync(samples, duration, dictionary);
+    }
+
+    // MARK: - Updates
+
+    /// <param name="silent">
+    /// The check at launch: nobody asked for it, so it reports only good news.
+    /// A failure there is the network's business, not the user's.
+    /// </param>
+    private async Task CheckForUpdateAsync(bool silent = false)
+    {
+        if (!silent) SetUpdate(UpdateStatus.Checking);
+        var result = await _updater.CheckAsync();
+        SetUpdate(silent && result is UpdateStatus.FailedState ? UpdateStatus.Idle : result);
+    }
+
+    /// <summary>
+    /// Downloads and stages the new build, then quits — the script the updater
+    /// left behind copies it in once this process is gone, and starts it again.
+    /// </summary>
+    private async Task InstallUpdateAsync()
+    {
+        if (_update is not UpdateStatus.AvailableState available) return;
+        SetUpdate(UpdateStatus.Downloading(0));
+        var result = await _updater.InstallAsync(available.Url, percent =>
+            _dispatcher.BeginInvoke(() => SetUpdate(UpdateStatus.Downloading(percent))));
+        SetUpdate(result);
+        if (result is UpdateStatus.InstallingState) Application.Current.Shutdown();
+    }
+
+    private void SetUpdate(UpdateStatus status)
+    {
+        _update = status;
+        SyncUi();
     }
 
     private async Task TranscribeAsync(float[] samples, TimeSpan duration,
@@ -552,6 +593,26 @@ internal sealed class AppController : IDisposable
         {
             controller._preferences = controller._preferences with { OnboardingDismissed = true };
             controller._preferences.Save();
+        }
+
+        public void ToggleSoundCues()
+        {
+            controller._preferences = controller._preferences with
+            {
+                SoundCues = !controller._preferences.SoundCues,
+            };
+            controller._preferences.Save();
+            controller.SyncUi();
+        }
+
+        public void ClickUpdate()
+        {
+            switch (AppUpdate.Click(controller._update))
+            {
+                case UpdateAction.Check: _ = controller.CheckForUpdateAsync(); break;
+                case UpdateAction.Install: _ = controller.InstallUpdateAsync(); break;
+                case UpdateAction.None: break;
+            }
         }
 
         public void ChangeShortcut() => controller.ChangeShortcut();

@@ -55,6 +55,8 @@ public partial class MainWindow : Window
 
         DateLabel.Text = presentation.DateLine.ToUpperInvariant();
         ApplyLaunchAtLogin(model.LaunchAtLogin);
+        SoundCuesLink.Content = CueSound.Label(model.SoundCues);
+        ApplyUpdate(model.Update);
         ApplyPill(presentation.Pill);
         RebuildPermissions(presentation.Permissions);
         ApplyStats(TranscriptStats.Make(model.History.Records, DateTimeOffset.Now));
@@ -216,7 +218,11 @@ public partial class MainWindow : Window
 
     private void OnDictionaryClicked(object sender, RoutedEventArgs e) => Select(Pane.Dictionary);
 
-    private void OnShortcutClicked(object sender, RoutedEventArgs e) => _actions.ChangeShortcut();
+    private void OnShortcutClicked(object sender, RoutedEventArgs e)
+    {
+        SettingsPopup.IsOpen = false;
+        _actions.ChangeShortcut();
+    }
 
     // MARK: - Start with Windows
 
@@ -236,7 +242,48 @@ public partial class MainWindow : Window
     private void OnLaunchAtLoginClicked(object sender, RoutedEventArgs e) =>
         _actions.ToggleLaunchAtLogin();
 
-    private void OnLogClicked(object sender, RoutedEventArgs e) => _actions.OpenLog();
+    private void OnSoundCuesClicked(object sender, RoutedEventArgs e) => _actions.ToggleSoundCues();
+
+    // MARK: - Settings
+
+    /// <summary>
+    /// The card grows upwards from its row, which sits at the bottom of the
+    /// window — the same trick the help popover uses, and for the same reason.
+    /// </summary>
+    private void OnSettingsClicked(object sender, RoutedEventArgs e)
+    {
+        VersionLine.Text = $"VoiceKey {Updater.CurrentVersion}";
+        SettingsPopup.PlacementTarget = SettingsLink;
+        SettingsPopup.Placement = PlacementMode.Right;
+        SettingsPopup.VerticalOffset = 0;
+        SettingsPopup.IsOpen = true;
+        Dispatcher.BeginInvoke(
+            () => SettingsPopup.VerticalOffset = SettingsLink.ActualHeight - SettingsCard.ActualHeight,
+            DispatcherPriority.Loaded);
+    }
+
+    // MARK: - Updates
+
+    /// <summary>
+    /// The same words in two places: a row inside Settings that is always there,
+    /// and a footer notice that only appears once there is something to say.
+    /// </summary>
+    private void ApplyUpdate(UpdateStatus status)
+    {
+        UpdateLink.Content = AppUpdate.Label(status);
+        UpdateNotice.Content = AppUpdate.Label(status);
+        UpdateNotice.Visibility = AppUpdate.IsVisible(status)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnUpdateClicked(object sender, RoutedEventArgs e) => _actions.ClickUpdate();
+
+    private void OnLogClicked(object sender, RoutedEventArgs e)
+    {
+        SettingsPopup.IsOpen = false;
+        _actions.OpenLog();
+    }
 
     // MARK: - Help
 
@@ -263,8 +310,12 @@ public partial class MainWindow : Window
             DispatcherPriority.Loaded);
     }
 
-    private void OnHelpClicked(object sender, RoutedEventArgs e) =>
-        ShowHelp(HelpLink, PlacementMode.Right);
+    /// <summary>Help hangs off the Settings row, since that is where its link now lives.</summary>
+    private void OnHelpClicked(object sender, RoutedEventArgs e)
+    {
+        SettingsPopup.IsOpen = false;
+        ShowHelp(SettingsLink, PlacementMode.Right);
+    }
 
     private void OnHelpShortcutClicked(object sender, RoutedEventArgs e)
     {

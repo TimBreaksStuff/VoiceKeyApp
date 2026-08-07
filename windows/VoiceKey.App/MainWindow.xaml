@@ -98,16 +98,52 @@
 
             <StackPanel Grid.Row="4" Margin="16,16,16,18">
                 <Rectangle Height="1" Fill="{StaticResource Border}" Margin="0,0,0,16" />
-                <Button x:Name="LaunchAtLoginLink" Style="{StaticResource LinkButton}"
-                        Click="OnLaunchAtLoginClicked" />
-                <Button Content="Shortcut" Style="{StaticResource LinkButton}"
-                        Margin="0,10,0,0" Click="OnShortcutClicked" />
-                <Button Content="Diagnostics log" Style="{StaticResource LinkButton}"
-                        Margin="0,10,0,0" Click="OnLogClicked" />
-                <Button x:Name="HelpLink" Content="Help &amp; shortcuts"
-                        Style="{StaticResource LinkButton}"
-                        Margin="0,10,0,0" Click="OnHelpClicked" />
+                <Button x:Name="SettingsLink" Style="{StaticResource LinkButton}"
+                        Click="OnSettingsClicked">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource GearGlyph}" Stretch="Uniform"
+                              Width="14" Height="14" Margin="0,0,8,0"
+                              VerticalAlignment="Center"
+                              Fill="{Binding Foreground,
+                                     RelativeSource={RelativeSource AncestorType=Button}}" />
+                        <TextBlock Text="Settings" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- Only here when there is news: see AppUpdate.IsVisible. -->
+                <Button x:Name="UpdateNotice" Style="{StaticResource DestructiveLink}"
+                        Margin="0,10,0,0" Visibility="Collapsed" Click="OnUpdateClicked" />
             </StackPanel>
+
+            <!-- Settings opens beside its row, the way Help does — the window
+                 stays where it is, so a shortcut can be tried straight after. -->
+            <Popup x:Name="SettingsPopup" StaysOpen="False" AllowsTransparency="True"
+                   HorizontalOffset="8">
+                <Border x:Name="SettingsCard" Background="{StaticResource Paper}" CornerRadius="10"
+                        Padding="18,16" MinWidth="260"
+                        BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Settings"
+                                   FontFamily="{StaticResource Serif}" FontSize="17"
+                                   Foreground="{StaticResource Ink}" Margin="0,0,0,12" />
+                        <Button x:Name="LaunchAtLoginLink" Style="{StaticResource LinkButton}"
+                                Click="OnLaunchAtLoginClicked" />
+                        <Button x:Name="SoundCuesLink" Style="{StaticResource LinkButton}"
+                                Margin="0,10,0,0" Click="OnSoundCuesClicked" />
+                        <Button Content="Shortcut" Style="{StaticResource LinkButton}"
+                                Margin="0,10,0,0" Click="OnShortcutClicked" />
+                        <Rectangle Height="1" Fill="{StaticResource BorderRow}" Margin="0,14,0,12" />
+                        <Button Content="Diagnostics log" Style="{StaticResource LinkButton}"
+                                Click="OnLogClicked" />
+                        <Button x:Name="HelpLink" Content="Help &amp; shortcuts"
+                                Style="{StaticResource LinkButton}"
+                                Margin="0,10,0,0" Click="OnHelpClicked" />
+                        <Button x:Name="UpdateLink" Style="{StaticResource LinkButton}"
+                                Margin="0,10,0,0" Click="OnUpdateClicked" />
+                        <TextBlock x:Name="VersionLine" Margin="0,12,0,0" FontSize="13"
+                                   Foreground="{StaticResource Ink3}" />
+                    </StackPanel>
+                </Border>
+            </Popup>
 
             <!-- Help opens beside whatever asked for it, not as a modal dialog:
                  the shortcut is easier to try while the window is still there. -->

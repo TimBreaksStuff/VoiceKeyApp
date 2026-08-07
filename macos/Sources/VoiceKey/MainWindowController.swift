@@ -15,6 +15,10 @@ struct MainWindowModel: Equatable {
     var showsOnboarding = true
     /// What the system reports about opening VoiceKey at login.
     var launchAtLogin: LaunchAtLoginState = .off
+    /// Whether starting and stopping a dictation plays its cue.
+    var soundCues = true
+    /// How far the check for a newer VoiceKey has got.
+    var update: UpdateStatus = .idle
 }
 
 /// What the window asks the app to do. Keeps AppKit glue out of AppController's
@@ -30,6 +34,9 @@ protocol MainWindowActions: AnyObject {
     func windowDismissOnboarding()
     func windowChangeShortcut()
     func windowToggleLaunchAtLogin()
+    func windowToggleSoundCues()
+    /// Check, install, or nothing — whichever the row's state calls for.
+    func windowClickUpdate()
     func windowOpenLog()
     func windowOpenPrivacy(for subject: WindowPresentation.Subject)
 }
@@ -63,8 +70,12 @@ final class MainWindowController: NSObject, NSWindowDelegate, NSTextFieldDelegat
     private let weekSaved = Theme.label("", font: Theme.serif(19))
     private let paneContainer = NSView()
     private var navRows: [Pane: SidebarNavRow] = [:]
-    private var helpLink: SidebarLink?
     private var launchAtLoginLink: SidebarLink?
+    private var soundCuesLink: SidebarLink?
+    private var settingsLink: SidebarLink?
+    private var updateNotice: SidebarLink?
+    private var updateRow: SidebarLink?
+    private let settingsPopover = NSPopover()
     private let permissionsPopover = NSPopover()
     private let helpPopover = NSPopover()
     private let permissionsList = NSStackView()
@@ -116,6 +127,10 @@ final class MainWindowController: NSObject, NSWindowDelegate, NSTextFieldDelegat
         statusPill.apply(presentation.pill)
         rebuildPermissions(presentation.permissions)
         applyLaunchAtLogin(model.launchAtLogin)
+        soundCuesLink?.title = CueSound.label(model.soundCues)
+        updateRow?.title = AppUpdate.label(model.update)
+        updateNotice?.title = AppUpdate.label(model.update)
+        updateNotice?.isHidden = !AppUpdate.isVisible(model.update)
         applyStats(TranscriptStats.make(from: model.history.records))
 
         navRows[.transcripts]?.count = TranscriptStats.grouped(model.history.records.count)
@@ -315,30 +330,90 @@ final class MainWindowController: NSObject, NSWindowDelegate, NSTextFieldDelegat
     }
 
     private func makeFooter() -> NSView {
-        let launch = SidebarLink(title: LaunchAtLogin.label("Open at login", .off)) { [weak self] in
-            self?.actions?.windowToggleLaunchAtLogin()
+        let settings = SidebarLink(title: "Settings", icon: Theme.gear(size: 14)) { [weak self] in
+            self?.showSettings()
         }
-        launchAtLoginLink = launch
+        settingsLink = settings
 
-        let shortcut = SidebarLink(title: "Shortcut") { [weak self] in
-            self?.actions?.windowChangeShortcut()
+        // Only here when there is news: see AppUpdate.isVisible.
+        let notice = SidebarLink(title: "", color: Theme.clay, hover: Theme.clayHover) { [weak self] in
+            self?.actions?.windowClickUpdate()
         }
-        let log = SidebarLink(title: "Diagnostics log") { [weak self] in
-            self?.actions?.windowOpenLog()
-        }
-        let help = SidebarLink(title: "Help & shortcuts") { [weak self] in
-            guard let self, let link = self.helpLink else { return }
-            self.showHelp(from: link, edge: .maxX)
-        }
-        helpLink = help
+        notice.isHidden = true
+        updateNotice = notice
 
         let rule = Theme.rule(Theme.border)
-        let stack = NSStackView(views: [rule, launch, shortcut, log, help])
+        let stack = NSStackView(views: [rule, settings, notice])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(16, after: rule)
         rule.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        return stack
+    }
+
+    // MARK: - Settings
+
+    /// Settings opens beside its row, the way Help does — the window stays where
+    /// it is, so a shortcut can be tried straight after changing it.
+    private func showSettings() {
+        guard let anchor = settingsLink else { return }
+        guard !settingsPopover.isShown else {
+            settingsPopover.performClose(nil)
+            return
+        }
+        settingsPopover.behavior = .transient
+        settingsPopover.contentViewController = wrap(padded(makeSettingsCard(), by: 18))
+        settingsPopover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxX)
+    }
+
+    private func makeSettingsCard() -> NSView {
+        let heading = Theme.label("Settings", font: Theme.serif(17))
+
+        let launch = SidebarLink(title: LaunchAtLogin.label("Open at login", model.launchAtLogin)) { [weak self] in
+            self?.actions?.windowToggleLaunchAtLogin()
+        }
+        launchAtLoginLink = launch
+
+        let sounds = SidebarLink(title: CueSound.label(model.soundCues)) { [weak self] in
+            self?.actions?.windowToggleSoundCues()
+        }
+        soundCuesLink = sounds
+
+        let shortcut = SidebarLink(title: "Shortcut") { [weak self] in
+            self?.settingsPopover.performClose(nil)
+            self?.actions?.windowChangeShortcut()
+        }
+        let rule = Theme.rule(Theme.borderRow)
+        let log = SidebarLink(title: "Diagnostics log") { [weak self] in
+            self?.settingsPopover.performClose(nil)
+            self?.actions?.windowOpenLog()
+        }
+        // Help hangs off the Settings row, since that is where its link now lives.
+        let help = SidebarLink(title: "Help & shortcuts") { [weak self] in
+            guard let self, let link = self.settingsLink else { return }
+            self.settingsPopover.performClose(nil)
+            self.showHelp(from: link, edge: .maxX)
+        }
+        let update = SidebarLink(title: AppUpdate.label(model.update)) { [weak self] in
+            self?.actions?.windowClickUpdate()
+        }
+        updateRow = update
+
+        let version = Theme.label("VoiceKey \(Updater.currentVersion)",
+                                  font: Theme.sans(13), color: Theme.ink3)
+
+        let stack = NSStackView(views: [heading, launch, sounds, shortcut, rule,
+                                        log, help, update, version])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.setCustomSpacing(12, after: heading)
+        stack.setCustomSpacing(14, after: shortcut)
+        stack.setCustomSpacing(12, after: rule)
+        stack.setCustomSpacing(12, after: update)
+        rule.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        stack.widthAnchor.constraint(greaterThanOrEqualToConstant: 224).isActive = true
         return stack
     }
 
@@ -741,21 +816,40 @@ final class SidebarLink: NSView {
     /// Settable: the launch-at-login row carries its state in its title.
     var title: String { didSet { recolour(colour) } }
 
+    /// The gear beside "Settings"; nil for every other row.
+    private let icon: NSImageView?
+
     init(title: String, color: NSColor = Theme.ink3, hover: NSColor = Theme.ink(),
-         action: @escaping () -> Void) {
+         icon: NSImage? = nil, action: @escaping () -> Void) {
         self.action = action
         self.title = title
         self.colour = color
         self.hoverColour = hover
         self.label = Theme.label(title, font: Theme.sans(14), color: color)
+        self.icon = icon.map { image in
+            let view = NSImageView(image: image)
+            view.translatesAutoresizingMaskIntoConstraints = false
+            return view
+        }
         super.init(frame: .zero)
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: topAnchor),
             label.bottomAnchor.constraint(equalTo: bottomAnchor),
-            label.leadingAnchor.constraint(equalTo: leadingAnchor),
             label.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+        guard let icon = self.icon else {
+            label.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
+            return
+        }
+        addSubview(icon)
+        NSLayoutConstraint.activate([
+            icon.leadingAnchor.constraint(equalTo: leadingAnchor),
+            icon.centerYAnchor.constraint(equalTo: label.centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 14),
+            icon.heightAnchor.constraint(equalToConstant: 14),
+            label.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 8),
         ])
     }
 
@@ -778,6 +872,7 @@ final class SidebarLink: NSView {
 
     private func recolour(_ colour: NSColor) {
         label.attributedStringValue = Theme.attributed(title, font: Theme.sans(14), color: colour)
+        icon?.contentTintColor = colour
     }
 }
 

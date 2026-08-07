@@ -6,7 +6,8 @@ namespace VoiceKey.App;
 /// The handful of window choices that have to survive a restart. Separate from
 /// <see cref="Shortcut"/>, which is the hotkey itself and nothing else.
 /// </summary>
-internal sealed record Preferences(bool OnboardingDismissed = false)
+/// <param name="SoundCues">Whether starting and stopping a dictation plays its cue.</param>
+internal sealed record Preferences(bool OnboardingDismissed = false, bool SoundCues = true)
 {
     private static string Path => System.IO.Path.Combine(Storage.Root, "preferences.json");
 

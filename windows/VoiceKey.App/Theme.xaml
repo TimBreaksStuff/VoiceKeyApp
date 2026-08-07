@@ -89,6 +89,10 @@
     </Style>
 
     <!-- A plain text link: the sidebar footer, "Export all", the sort control. -->
+    <!-- The Settings gear: eight teeth around a hollow hub, drawn on a 16x16 grid. -->
+    <PathGeometry x:Key="GearGlyph" FillRule="EvenOdd"
+                  Figures="M 14.79,6.31 L 14.79,9.69 L 12.85,9.86 L 12.75,10.12 L 14.00,11.61 L 11.61,14.00 L 10.12,12.75 L 9.86,12.85 L 9.69,14.79 L 6.31,14.79 L 6.14,12.85 L 5.88,12.75 L 4.39,14.00 L 2.00,11.61 L 3.25,10.12 L 3.15,9.86 L 1.21,9.69 L 1.21,6.31 L 3.15,6.14 L 3.25,5.88 L 2.00,4.39 L 4.39,2.00 L 5.88,3.25 L 6.14,3.15 L 6.31,1.21 L 9.69,1.21 L 9.86,3.15 L 10.12,3.25 L 11.61,2.00 L 14.00,4.39 L 12.75,5.88 L 12.85,6.14 Z M 5.50,8.00 A 2.5,2.5 0 1 0 10.50,8.00 A 2.5,2.5 0 1 0 5.50,8.00 Z" />
+
     <Style x:Key="LinkButton" TargetType="Button">
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="FontFamily" Value="{StaticResource Sans}" />

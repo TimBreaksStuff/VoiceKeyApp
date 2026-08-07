@@ -1,5 +1,28 @@
 # Changelog — VoiceKey for Windows
 
+## 1.3.0 — one place for the settings, and a way to get the next version
+
+**The sidebar footer was five links deep.** Start with Windows, Sounds, Shortcut, Diagnostics log, Help — all of them equally loud, none of them things you touch more than once. They now live behind one row with a gear on it, and the card opens beside it the way Help always has: the window stays where it is, so a shortcut can be tried the moment it is changed.
+
+- **The gear is drawn, not shipped** — eight teeth around a hollow hub on the same 16x16 grid the tray glyph uses.
+- **Help hangs off the Settings row now**, since that is where its link lives.
+
+**VoiceKey can update itself.** It asks GitHub once at launch whether there is a newer release. If there is, a clay `Update to 1.4.0` appears under Settings; clicking it downloads that release, and VoiceKey quits, swaps itself, and comes back.
+
+- **A launch check that fails says nothing.** Nobody asked for it, so a missing network is not the user's problem. `Check for updates` inside Settings is the deliberate one, and that one reports what happened — `Update check failed — GitHub unreachable`.
+- **The swap happens after VoiceKey is gone.** A running program cannot replace its own files, so the download is unpacked beside the install and a small script waits for the process to exit, copies the build in, and starts it again.
+- **A release we cannot place is not an update.** Only a tag that reads as plain numbers counts, and only a `win-x64` zip is downloaded; anything else leaves the app saying it is up to date.
+- The version VoiceKey is running is at the bottom of the Settings card.
+
+## 1.2.0 — you can hear it listening
+
+**Two short notes, one up and one down.** Starting a dictation plays E5 up to B5; stopping plays the same interval back down. Hold-to-talk used to be silent until the text appeared, which left the only confirmation that VoiceKey was recording in a tray icon nobody is looking at mid-sentence — the point of the shortcut is that you keep your eyes where they were.
+
+- **The direction is the message.** Rising means listening, falling means done. Two notes of the same pair, so there is nothing to learn and no way to mistake one for the other after the first time.
+- **Nothing is shipped to play.** The cues are synthesised as 16-bit mono PCM at 48 kHz in `CueSound`, the same way the tray glyph is drawn rather than loaded, and both notes fade to silence at either end so the waveform never steps — a step is a click.
+- **The stop cue plays after the recorder has stopped**, so it can never end up inside the recording it is announcing.
+- **`Sounds — On` in the sidebar footer turns them off**, beside `Start with Windows` and worded the same way. The choice is saved with the window's other preferences, and the cues are on until you say otherwise.
+
 ## 1.1.0 — start with Windows
 
 **VoiceKey can start itself when you sign in.** A hold-to-talk shortcut that only exists after you remember to launch the app is not much of a shortcut. The sidebar footer carries the switch, under the rule with the other utility links: `Start with Windows — Off`. Clicking it toggles.

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -11,7 +11,7 @@
     <ApplicationIcon>Resources\VoiceKey.ico</ApplicationIcon>
     <AssemblyName>VoiceKey</AssemblyName>
     <RootNamespace>VoiceKey.App</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.3.0</Version>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>

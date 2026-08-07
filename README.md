@@ -13,7 +13,12 @@ Minimal local dictation for macOS and Windows. **Hold the shortcut, speak, relea
 - **Per-app formatting** — skips the trailing period in editors, ensures one in mail clients.
 - **Cleans as it goes** — drops filler words, collapses stutters, discards silence and background noise.
 - **Searchable history** — everything you have dictated, grouped by day, with word counts and pace.
+- **Says when it is listening** — two short notes, one up to start and one down to stop. Off in a click.
+- **Starts when you sign in** — optional, and read live from the system rather than remembered.
+- **Updates itself** — checks GitHub at launch; one click downloads the new release and swaps it in.
 - **Lives out of the way** — the macOS menu bar and the Windows tray; no Dock or taskbar clutter.
+
+Everything adjustable is behind the gear at the bottom of the sidebar: the shortcut, the sounds, starting at login, the diagnostics log, and the update check.
 
 ## Platforms
 
@@ -27,7 +32,7 @@ Minimal local dictation for macOS and Windows. **Hold the shortcut, speak, relea
 
 ## Install
 
-**[Download VoiceKey 1.0.0](https://github.com/TimBreaksStuff/VoiceKeyApp/releases/latest)** — `VoiceKey-1.0.0-macos-arm64.zip` (Apple Silicon) or `VoiceKey-1.0.0-win-x64.zip`. Or build from source below.
+**[Download the latest release](https://github.com/TimBreaksStuff/VoiceKeyApp/releases/latest)** — `VoiceKey-<version>-macos-arm64.zip` (Apple Silicon) or `VoiceKey-<version>-win-x64.zip`. Or build from source below. Once it is installed, VoiceKey offers later versions itself.
 
 **macOS** — unzip, move `VoiceKey.app` into `/Applications`, then clear the download quarantine:
 

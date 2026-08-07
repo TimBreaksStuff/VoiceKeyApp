@@ -55,9 +55,17 @@ final class AppController: NSObject, NSApplicationDelegate {
     private var accessibilityGrant: Grant { AXIsProcessTrusted() ? .granted : .unknown }
 
     private static let onboardingKey = "hasDismissedOnboarding"
+    private static let soundCuesKey = "playsSoundCues"
+
+    /// Absent means on: the cues are the default, and only a click turns them off.
+    private var soundCues: Bool {
+        UserDefaults.standard.object(forKey: Self.soundCuesKey) as? Bool ?? true
+    }
 
     /// The last transcript deleted from the window, for as long as undo can reach it.
     private var lastDeleted: Transcript?
+
+    private var update: UpdateStatus = .idle
 
     private var shortcutIsBound: Bool { hotKey?.isRegistered == true }
 
@@ -122,6 +130,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         mainWindow.show()
 
         registerHotKey()
+        Task { await checkForUpdate(silent: true) }
 
         recorder.onAutoStop = { [weak self] in
             guard let self, case .recording = self.state else { return }
@@ -328,7 +337,7 @@ final class AppController: NSObject, NSApplicationDelegate {
             showsOnboarding: WindowPresentation.showsOnboarding(
                 dismissed: UserDefaults.standard.bool(forKey: Self.onboardingKey),
                 transcripts: history.records.count),
-            launchAtLogin: LoginItem.state))
+            launchAtLogin: LoginItem.state, soundCues: soundCues, update: update))
     }
 
     /// The header's elapsed time ticks once a second while recording; the menu
@@ -355,6 +364,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         case .idle:
             do {
                 try recorder.start()
+                if soundCues { SoundCue.recordingStarted() }
                 recordingStartedByPressAt = Date()
                 state = .recording
             } catch {
@@ -381,10 +391,46 @@ final class AppController: NSObject, NSApplicationDelegate {
         finishRecording()
     }
 
+    // MARK: - Updates
+
+    /// - Parameter silent: The check at launch. Nobody asked for it, so it
+    ///   reports only good news — a failure there is the network's business,
+    ///   not the user's.
+    @MainActor
+    private func checkForUpdate(silent: Bool = false) async {
+        if !silent { setUpdate(.checking) }
+        let result = await Updater.check()
+        if silent, case .failed = result {
+            setUpdate(.idle)
+            return
+        }
+        setUpdate(result)
+    }
+
+    /// Downloads and stages the new build, then quits — the script the updater
+    /// left behind copies it in once this process is gone, and opens it again.
+    @MainActor
+    private func installUpdate() async {
+        guard case .available(_, let url) = update else { return }
+        setUpdate(.downloading(percent: 0))
+        let result = await Updater.install(from: url) { percent in
+            Task { @MainActor in self.setUpdate(.downloading(percent: percent)) }
+        }
+        setUpdate(result)
+        if case .installing = result { NSApp.terminate(nil) }
+    }
+
+    private func setUpdate(_ status: UpdateStatus) {
+        update = status
+        syncUI()
+    }
+
     private func finishRecording() {
         recordingStartedByPressAt = nil
         state = .transcribing
         let (samples, heardSpeech) = recorder.stop()
+        // After stop(), so the cue is never in the recording it announces.
+        if soundCues { SoundCue.recordingStopped() }
         let duration = Double(samples.count) / 16_000 // the recorder resamples to 16kHz mono
         Log.line("stopped — \(samples.count) samples (\(samples.count / 16_000)s), heardSpeech=\(heardSpeech)")
         guard heardSpeech else {
@@ -601,6 +647,19 @@ extension AppController: MainWindowActions {
 
     func windowDismissOnboarding() {
         UserDefaults.standard.set(true, forKey: Self.onboardingKey)
+        syncUI()
+    }
+
+    func windowClickUpdate() {
+        switch AppUpdate.click(update) {
+        case .check: Task { await checkForUpdate() }
+        case .install: Task { await installUpdate() }
+        case .none: break
+        }
+    }
+
+    func windowToggleSoundCues() {
+        UserDefaults.standard.set(!soundCues, forKey: Self.soundCuesKey)
         syncUI()
     }
 

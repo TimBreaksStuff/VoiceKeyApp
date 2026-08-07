@@ -138,6 +138,36 @@ enum Theme {
     }
 
     /// A 1pt rule. Horizontal by default; `vertical` fixes the width instead.
+    /// The Settings gear: eight teeth around a hollow hub, drawn rather than
+    /// shipped — the same geometry the Windows build carries in its XAML.
+    static func gear(size: CGFloat) -> NSImage {
+        let teeth = (0..<8).flatMap { tooth -> [(CGFloat, CGFloat)] in
+            let base = CGFloat(tooth) * 45
+            return [(base - 14, 7.0), (base + 14, 7.0), (base + 21, 5.2), (base + 24, 5.2)]
+        }
+        let path = NSBezierPath()
+        for (index, point) in teeth.enumerated() {
+            let radians = point.0 * .pi / 180
+            let at = NSPoint(x: 8 + point.1 * cos(radians), y: 8 + point.1 * sin(radians))
+            if index == 0 { path.move(to: at) } else { path.line(to: at) }
+        }
+        path.close()
+        path.appendOval(in: NSRect(x: 5.5, y: 5.5, width: 5, height: 5))
+        path.windingRule = .evenOdd
+
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
+            let scale = size / 16
+            guard let scaled = path.copy() as? NSBezierPath else { return false }
+            scaled.transform(using: AffineTransform(scaleByX: scale, byY: scale))
+            NSColor.black.setFill()
+            scaled.fill()
+            return true
+        }
+        // A template image takes the row's own colour, hover included.
+        image.isTemplate = true
+        return image
+    }
+
     static func rule(_ color: NSColor, thickness: CGFloat = 1, vertical: Bool = false) -> NSView {
         let view = NSView()
         view.wantsLayer = true
