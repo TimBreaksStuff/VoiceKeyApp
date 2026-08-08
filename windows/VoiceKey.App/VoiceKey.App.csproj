@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms comes along for NotifyIcon: WPF has no tray API of its own. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Resources\VoiceKey.ico</ApplicationIcon>
+    <AssemblyName>VoiceKey</AssemblyName>
+    <RootNamespace>VoiceKey.App</RootNamespace>
+    <Version>1.4.1</Version>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is here for NotifyIcon alone. Its implicit usings would make
+         Application, MessageBox, Brush and FontFamily ambiguous against WPF in
+         every file — and they drop System.IO to make room — so both are imported
+         explicitly, in the two files that actually draw with them. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VoiceKey.Core\VoiceKey.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <!-- Three whisper.cpp backends, tried in the order Transcriber.cs sets: CUDA
+         (needs the CUDA 13 redistributable), Vulkan (driver only), then CPU. -->
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+    <!-- .Cuda is a meta-package over .Cuda.Windows + .Cuda.Linux; naming the
+         Windows half directly keeps 159MB of ELF .so files out of the build. -->
+    <PackageReference Include="Whisper.net.Runtime.Cuda.Windows" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.9.1" />
+  </ItemGroup>
+
+  <!-- Whisper.net.Runtime.Vulkan adds its linux-x64 natives from an ItemGroup
+       with no TargetFramework condition, and the CPU runtime adds win-arm64 and
+       win-x86 — none of which a win-x64 process can load. Package .targets are
+       imported after this file, so the items only exist inside a target. -->
+  <Target Name="DropForeignWhisperNatives" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Remove="@(None)"
+            Condition="$([System.String]::Copy('%(None.TargetPath)').StartsWith('runtimes/')) And
+                       !$([System.String]::Copy('%(None.TargetPath)').Contains('win-x64'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>
